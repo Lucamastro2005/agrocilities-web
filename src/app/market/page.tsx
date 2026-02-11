@@ -42,19 +42,24 @@ export default function MarketPage() {
       
       navigator.geolocation.getCurrentPosition(
         (position) => { 
+          // ÉXITO: Consiguió la ubicación real
           setLatitud(position.coords.latitude); 
           setLongitud(position.coords.longitude); 
           setIsLocating(false); 
         },
         (error) => { 
+          // FALLÓ EL GPS REAL: Entra el Plan de Respaldo (Fallback)
           setIsLocating(false); 
-          if (error.code === error.PERMISSION_DENIED) {
-            alert("⚠️ Permiso denegado. Tenés que habilitar la ubicación en tu navegador para operar.");
-          } else {
-            alert("⚠️ La señal GPS es débil o tardó demasiado. Intentá de nuevo a cielo abierto o chequeá tu conexión.");
-          }
+          console.warn("GPS Real falló:", error.message);
+          
+          alert("⚠️ La señal satelital es débil o estás en una PC de escritorio. Inyectando coordenadas simuladas del lote para continuar la operación.");
+          
+          // Coordenadas de un campo de prueba (Ej: Zona Núcleo, Argentina)
+          setLatitud(-33.9424); 
+          setLongitud(-60.5588);
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } 
+        // Le sacamos el "High Accuracy" para que no se trabe en computadoras
+        { enableHighAccuracy: false, timeout: 5000, maximumAge: 10000 } 
       );
     } else {
       alert("Tu navegador no soporta geolocalización.");
