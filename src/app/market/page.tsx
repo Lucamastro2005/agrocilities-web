@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 const chain = defineChain(11155111); 
 
 // ⚠️ PEGAR TU CONTRATO ESCROW V2 ACÁ:
-const CONTRACT_ADDRESS = "0xDa079A2707e52829D9Fd99Fc05ba690e4B50fF48"; 
+const CONTRACT_ADDRESS = "0x01F8FeAc82f665391eBF5a940173441ee3787A8f"; 
 const USDC_ADDRESS = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"; 
 
 const contract = getContract({ client, chain, address: CONTRACT_ADDRESS });
