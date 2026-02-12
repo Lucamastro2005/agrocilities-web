@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 
 const chain = defineChain(11155111); 
 
-// ⚠️ PEGAR TU CONTRATO ESCROW V2 ACÁ:
+// ⚠️ CONTRATO ESCROW V2 ACTUALIZADO:
 const CONTRACT_ADDRESS = "0x01F8FeAc82f665391eBF5a940173441ee3787A8f"; 
 const USDC_ADDRESS = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"; 
 
@@ -48,18 +48,24 @@ export default function MarketPage() {
           setIsLocating(false); 
         },
         (error) => { 
-          // FALLÓ EL GPS REAL: Entra el Plan de Respaldo (Fallback)
+          // FALLÓ EL GPS REAL
           setIsLocating(false); 
-          console.warn("GPS Real falló:", error.message);
+          console.error("Error GPS:", error);
           
-          alert("⚠️ La señal satelital es débil o estás en una PC de escritorio. Inyectando coordenadas simuladas del lote para continuar la operación.");
+          // Mensaje de error real en lugar de simulación
+          let mensaje = "❌ No se pudo obtener la ubicación.";
+          if (error.code === 1) mensaje = "❌ Permiso de ubicación denegado. Habilítalo en el navegador.";
+          else if (error.code === 2) mensaje = "❌ Señal GPS no disponible. Salí a cielo abierto.";
+          else if (error.code === 3) mensaje = "❌ Tiempo de espera agotado. Intentalo de nuevo.";
           
-          // Coordenadas de un campo de prueba (Ej: Zona Núcleo, Argentina)
-          setLatitud(-33.9424); 
-          setLongitud(-60.5588);
+          alert(mensaje);
+          
+          // ELIMINADO: Ya no inyectamos coordenadas falsas aquí.
         },
-        // Le sacamos el "High Accuracy" para que no se trabe en computadoras
-        { enableHighAccuracy: false, timeout: 5000, maximumAge: 10000 } 
+        // CONFIGURACIÓN MEJORADA PARA CAMPO:
+        // enableHighAccuracy: true -> Usa GPS real (necesario en lotes sin WiFi).
+        // timeout: 20000 -> Espera hasta 20 segundos antes de fallar (los 5s anteriores eran muy poco).
+        { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 } 
       );
     } else {
       alert("Tu navegador no soporta geolocalización.");
