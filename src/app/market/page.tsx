@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 const chain = defineChain(11155111);
 
 // ⚠️ DIRECCIONES DE CONTRATOS (Verificadas)
-const CONTRACT_ADDRESS = "0x1e09197aADD32e3065792eBf57b48a3D1b2671BF"; // Tu Escrow V2
+const CONTRACT_ADDRESS = "0xDa079A2707e52829D9Fd99Fc05ba690e4B50fF48"; // Tu Escrow V2
 const USDC_ADDRESS = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";     // USDC Testnet
 
 const contract = getContract({ client, chain, address: CONTRACT_ADDRESS });
