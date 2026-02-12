@@ -9,7 +9,7 @@ import { client } from "@/app/client";
 
 // --- CONFIGURACIÓN BLOCKCHAIN ---
 const chain = defineChain(11155111); // Sepolia
-const CONTRACT_ADDRESS = "0x01F8FeAc82f665391eBF5a940173441ee3787A8f"; // Tu contrato
+const CONTRACT_ADDRESS = "0x1e09197aADD32e3065792eBf57b48a3D1b2671BF"; // Tu contrato
 const contract = getContract({ client, chain, address: CONTRACT_ADDRESS });
 
 type Pedido = {
