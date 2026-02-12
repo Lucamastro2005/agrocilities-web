@@ -3,14 +3,15 @@ import Navbar from "@/components/Navbar";
 import { defineChain, getContract, prepareContractCall } from "thirdweb";
 import { TransactionButton, useActiveAccount } from "thirdweb/react";
 import { client } from "@/app/client";
-import { supabase } from "@/lib/supabase"; // Asegurate que esta ruta sea correcta según tu proyecto
+import { supabase } from "@/lib/supabase";
 import { useEffect, useState } from "react";
 
-const chain = defineChain(11155111); // Sepolia
+// Configuración de la Blockchain (Sepolia)
+const chain = defineChain(11155111);
 
-// ⚠️ CONTRATOS ACTUALIZADOS
-const CONTRACT_ADDRESS = "0x01F8FeAc82f665391eBF5a940173441ee3787A8f";
-const USDC_ADDRESS = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
+// ⚠️ DIRECCIONES DE CONTRATOS (Verificadas)
+const CONTRACT_ADDRESS = "0x01F8FeAc82f665391eBF5a940173441ee3787A8f"; // Tu Escrow V2
+const USDC_ADDRESS = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";     // USDC Testnet
 
 const contract = getContract({ client, chain, address: CONTRACT_ADDRESS });
 const usdcContract = getContract({ client, chain, address: USDC_ADDRESS });
@@ -35,21 +36,25 @@ export default function MarketPage() {
   const [longitud, setLongitud] = useState<number | null>(null);
   const [isLocating, setIsLocating] = useState(false);
 
-  // Cargar Máquinas
+  // Carga de Máquinas desde Supabase
   useEffect(() => {
     async function fetchMaquinas() {
       const { data, error } = await supabase
         .from("maquinas")
         .select("*")
         .order("id", { ascending: true });
-      if (error) console.error(error);
-      else setMaquinas(data || []);
+      
+      if (error) {
+        console.error("Error Supabase:", error);
+      } else {
+        setMaquinas(data || []);
+      }
       setLoading(false);
     }
     fetchMaquinas();
   }, []);
 
-  // Lógica GPS Robusta
+  // Función de Geolocalización (Optimizada para Agro)
   const capturarUbicacion = () => {
     if ("geolocation" in navigator) {
       setIsLocating(true);
@@ -65,13 +70,13 @@ export default function MarketPage() {
           console.error("Error GPS:", error);
 
           let mensaje = "❌ No se pudo obtener la ubicación.";
-          if (error.code === 1) mensaje = "❌ Permiso denegado. Habilitalo en el navegador.";
-          else if (error.code === 2) mensaje = "❌ Sin señal GPS. Salí a cielo abierto.";
-          else if (error.code === 3) mensaje = "❌ Tiempo de espera agotado (Timeout).";
+          if (error.code === 1) mensaje = "❌ Permiso GPS denegado.";
+          else if (error.code === 2) mensaje = "❌ Sin señal satelital. Salí afuera.";
+          else if (error.code === 3) mensaje = "❌ Tiempo de espera agotado.";
 
           alert(mensaje);
         },
-        // Configuración para Agro: Alta precisión y 20 segundos de espera
+        // Alta precisión y 20 segundos de espera
         { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
       );
     } else {
@@ -125,7 +130,7 @@ export default function MarketPage() {
           </button>
         </div>
 
-        {/* Grilla de Máquinas */}
+        {/* Listado de Máquinas */}
         {loading ? (
           <div className="flex justify-center py-20">
             <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div>
@@ -133,10 +138,15 @@ export default function MarketPage() {
         ) : (
           <div className="grid md:grid-cols-3 gap-8">
             {maquinas.map((machine) => {
-              // CÁLCULO SEGURO DEL MONTO (Evita decimales y errores BigInt)
-              const precioNumerico = Number(machine.precio_hora);
-              const montoCalculado = precioNumerico * 10 * 1000000; // 10 horas * decimales USDC
-              const montoBigInt = BigInt(Math.floor(montoCalculado));
+              
+              // --- LÓGICA DE PRECIOS BLINDADA ---
+              // 1. Convertimos a número JS
+              const precioNum = Number(machine.precio_hora);
+              // 2. Multiplicamos por horas (10) y decimales USDC (6 ceros)
+              const montoRaw = precioNum * 10 * 1000000;
+              // 3. Math.floor() elimina cualquier decimal basura (ej: .000004)
+              // 4. BigInt() convierte a formato Blockchain
+              const montoBigInt = BigInt(Math.floor(montoRaw));
 
               return (
                 <div
@@ -183,7 +193,8 @@ export default function MarketPage() {
                     </div>
 
                     <div className="border-t border-zinc-800 pt-6 space-y-3">
-                      {/* BOTÓN 1: APROBAR (ALLOWANCE) */}
+                      
+                      {/* --- BOTÓN 1: APROBAR USDC --- */}
                       <TransactionButton
                         transaction={() =>
                           prepareContractCall({
@@ -193,7 +204,7 @@ export default function MarketPage() {
                           })
                         }
                         onTransactionConfirmed={() =>
-                          alert("✅ Fondos Aprobados. Ahora confirmá el alquiler.")
+                          alert("✅ USDC Aprobados. Esperá 5 segundos y presioná 'Confirmar Alquiler'.")
                         }
                         onError={(error) =>
                           alert(`❌ Error al aprobar: ${error.message}`)
@@ -207,25 +218,35 @@ export default function MarketPage() {
                           padding: "14px",
                           borderRadius: "12px",
                           fontWeight: "bold",
-                          fontSize: "1rem",
                           opacity: machine.disponible && latitud ? 1 : 0.5,
                         }}
                       >
                         {!latitud ? "🚫 Falta GPS" : "1️⃣ Autorizar Fondos"}
                       </TransactionButton>
 
-                      {/* BOTÓN 2: CREAR TRABAJO (ESCROW) */}
+                      {/* --- BOTÓN 2: CONFIRMAR ALQUILER (Con Debug) --- */}
                       <TransactionButton
-                        transaction={() =>
-                          prepareContractCall({
+                        transaction={() => {
+                          // Logs para detectar errores
+                          console.log("--- INICIANDO ALQUILER ---");
+                          console.log("Dueño Wallet:", machine.owner_wallet);
+                          console.log("Monto (WEI):", montoBigInt.toString());
+                          
+                          // Validación básica
+                          if (!machine.owner_wallet || machine.owner_wallet.length < 40) {
+                            throw new Error("La billetera del dueño en Supabase es inválida.");
+                          }
+
+                          return prepareContractCall({
                             contract,
-                            method:
-                              "function crearTrabajo(address _contratista, uint256 _monto)",
+                            method: "function crearTrabajo(address _contratista, uint256 _monto)",
                             params: [machine.owner_wallet, montoBigInt],
-                          })
-                        }
-                        onTransactionConfirmed={async () => {
-                          alert("🚀 ¡Alquiler Confirmado!");
+                          });
+                        }}
+                        onTransactionConfirmed={async (receipt) => {
+                          alert("🚀 ¡Alquiler Confirmado Exitosamente!");
+                          console.log("Receipt:", receipt);
+                          
                           if (account) {
                             await supabase.from("alquileres").insert([
                               {
@@ -237,19 +258,17 @@ export default function MarketPage() {
                                 longitud: longitud,
                               },
                             ]);
+                            // Recargar página para actualizar estado
+                            window.location.reload();
                           }
                         }}
                         onError={(error) => {
-                          console.error("Error Contrato:", error);
-                          if (
-                            error.message.includes("allowance") ||
-                            error.message.includes("ERC20")
-                          ) {
-                            alert(
-                              "❌ Error: Fondos insuficientes aprobados. Volvé a tocar el Botón 1."
-                            );
+                          console.error("❌ ERROR ALQUILER:", error);
+                          
+                          if (error.message.includes("allowance") || error.message.includes("ERC20")) {
+                            alert("⚠️ Error: Fondos no autorizados. Volvé a tocar el Botón 1 y esperá que termine.");
                           } else {
-                            alert(`❌ Error al alquilar: ${error.message}`);
+                            alert(`❌ Error técnico: ${error.message}. Mirá la consola (F12) para más detalles.`);
                           }
                         }}
                         disabled={!machine.disponible || !latitud}
@@ -261,12 +280,12 @@ export default function MarketPage() {
                           padding: "14px",
                           borderRadius: "12px",
                           fontWeight: "bold",
-                          fontSize: "1rem",
                           opacity: machine.disponible && latitud ? 1 : 0.5,
                         }}
                       >
                         {!latitud ? "🚫 Falta GPS" : "2️⃣ Confirmar Alquiler"}
                       </TransactionButton>
+
                     </div>
                   </div>
                 </div>
