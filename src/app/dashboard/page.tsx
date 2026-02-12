@@ -141,7 +141,7 @@ export default function Dashboard() {
                         return prepareContractCall({
                           contract,
                           method: "function confirmarTrabajo(uint256 _jobId)", 
-                          params: [BigInt(pedido.id)], 
+                          params: [BigInt(pedido.id - 1)], 
                         });
                       }}
                       onTransactionConfirmed={(receipt) => {
