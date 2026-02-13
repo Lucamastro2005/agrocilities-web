@@ -54,11 +54,10 @@ export default function MarketPage() {
     fetchMaquinas();
   }, []);
 
-  // Función de Geolocalización (Optimizada para Agro)
+  // Función de Geolocalización
   const capturarUbicacion = () => {
     if ("geolocation" in navigator) {
       setIsLocating(true);
-
       navigator.geolocation.getCurrentPosition(
         (position) => {
           setLatitud(position.coords.latitude);
@@ -68,15 +67,8 @@ export default function MarketPage() {
         (error) => {
           setIsLocating(false);
           console.error("Error GPS:", error);
-
-          let mensaje = "❌ No se pudo obtener la ubicación.";
-          if (error.code === 1) mensaje = "❌ Permiso GPS denegado.";
-          else if (error.code === 2) mensaje = "❌ Sin señal satelital. Salí afuera.";
-          else if (error.code === 3) mensaje = "❌ Tiempo de espera agotado.";
-
-          alert(mensaje);
+          alert("❌ No se pudo obtener la ubicación. Activá el GPS.");
         },
-        // Alta precisión y 20 segundos de espera
         { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
       );
     } else {
@@ -120,13 +112,7 @@ export default function MarketPage() {
                 : "bg-blue-600 hover:bg-blue-500 hover:scale-105 text-white"
               }`}
           >
-            {latitud ? (
-              <>✅ Coordenadas Aseguradas</>
-            ) : isLocating ? (
-              <>⏳ Buscando satélites...</>
-            ) : (
-              <>📍 Activar GPS Satelital</>
-            )}
+            {latitud ? "✅ Coordenadas Aseguradas" : isLocating ? "⏳ Buscando satélites..." : "📍 Activar GPS Satelital"}
           </button>
         </div>
 
@@ -138,114 +124,54 @@ export default function MarketPage() {
         ) : (
           <div className="grid md:grid-cols-3 gap-8">
             {maquinas.map((machine) => {
-              
-              // --- LÓGICA DE PRECIOS BLINDADA ---
-              // 1. Convertimos a número JS
               const precioNum = Number(machine.precio_hora);
-              // 2. Multiplicamos por horas (10) y decimales USDC (6 ceros)
               const montoRaw = precioNum * 10 * 1000000;
-              // 3. Math.floor() elimina cualquier decimal basura (ej: .000004)
-              // 4. BigInt() convierte a formato Blockchain
               const montoBigInt = BigInt(Math.floor(montoRaw));
 
               return (
-                <div
-                  key={machine.id}
-                  className={`group bg-zinc-900 border ${
-                    machine.disponible
-                      ? "border-zinc-800 hover:border-blue-500/50"
-                      : "border-red-900/30 opacity-75"
-                  } rounded-3xl overflow-hidden relative transition-all hover:shadow-2xl hover:shadow-blue-900/20`}
-                >
+                <div key={machine.id} className={`group bg-zinc-900 border ${machine.disponible ? "border-zinc-800 hover:border-blue-500/50" : "border-red-900/30 opacity-75"} rounded-3xl overflow-hidden relative transition-all hover:shadow-2xl hover:shadow-blue-900/20`}>
                   {!machine.disponible && (
                     <div className="absolute inset-0 bg-black/80 z-10 flex items-center justify-center backdrop-blur-sm">
-                      <span className="bg-red-600/90 text-white px-6 py-3 rounded-full font-bold text-xl transform -rotate-12 border-2 border-white/20 shadow-xl">
-                        ALQUILADA
-                      </span>
+                      <span className="bg-red-600/90 text-white px-6 py-3 rounded-full font-bold text-xl transform -rotate-12 border-2 border-white/20 shadow-xl">ALQUILADA</span>
                     </div>
                   )}
 
                   <div className="h-56 bg-zinc-800 relative overflow-hidden">
-                    <img
-                      src={machine.imagen_url}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                      onError={(e) =>
-                        (e.currentTarget.src =
-                          "https://cdn.pixabay.com/photo/2017/09/06/14/53/tractor-2721779_1280.jpg")
-                      }
-                    />
-                    <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-                      {machine.tipo}
-                    </div>
+                    <img src={machine.imagen_url} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" onError={(e) => (e.currentTarget.src = "https://cdn.pixabay.com/photo/2017/09/06/14/53/tractor-2721779_1280.jpg")} />
+                    <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">{machine.tipo}</div>
                   </div>
 
                   <div className="p-6 space-y-6">
                     <div>
                       <h3 className="text-2xl font-bold mb-2">{machine.nombre}</h3>
                       <div className="flex items-baseline gap-2">
-                        <span className="text-3xl font-black text-green-400">
-                          ${machine.precio_hora}
-                        </span>
-                        <span className="text-zinc-500 font-medium">
-                          USDC / hora
-                        </span>
+                        <span className="text-3xl font-black text-green-400">${machine.precio_hora}</span>
+                        <span className="text-zinc-500 font-medium">USDC / hora</span>
                       </div>
                     </div>
 
                     <div className="border-t border-zinc-800 pt-6 space-y-3">
-                      
-                      {/* --- BOTÓN 1: APROBAR USDC --- */}
                       <TransactionButton
-                        transaction={() =>
-                          prepareContractCall({
-                            contract: usdcContract,
-                            method: "function approve(address spender, uint256 amount)",
-                            params: [CONTRACT_ADDRESS, montoBigInt],
-                          })
-                        }
-                        onTransactionConfirmed={() =>
-                          alert("✅ USDC Aprobados. Esperá 5 segundos y presioná 'Confirmar Alquiler'.")
-                        }
-                        onError={(error) =>
-                          alert(`❌ Error al aprobar: ${error.message}`)
-                        }
+                        transaction={() => prepareContractCall({ contract: usdcContract, method: "function approve(address spender, uint256 amount)", params: [CONTRACT_ADDRESS, montoBigInt] })}
+                        onTransactionConfirmed={() => alert("✅ USDC Aprobados. Esperá 5 segundos y presioná 'Confirmar Alquiler'.")}
                         disabled={!machine.disponible || !latitud}
-                        style={{
-                          width: "100%",
-                          backgroundColor:
-                            machine.disponible && latitud ? "#2563eb" : "#3f3f46",
-                          color: "white",
-                          padding: "14px",
-                          borderRadius: "12px",
-                          fontWeight: "bold",
-                          opacity: machine.disponible && latitud ? 1 : 0.5,
-                        }}
+                        style={{ width: "100%", backgroundColor: machine.disponible && latitud ? "#2563eb" : "#3f3f46", color: "white", padding: "14px", borderRadius: "12px", fontWeight: "bold", opacity: machine.disponible && latitud ? 1 : 0.5 }}
                       >
                         {!latitud ? "🚫 Falta GPS" : "1️⃣ Autorizar Fondos"}
                       </TransactionButton>
 
-                      {/* --- BOTÓN 2: CONFIRMAR ALQUILER (Con Debug) --- */}
                       <TransactionButton
                         transaction={() => {
-                          // Logs para detectar errores
-                          console.log("--- INICIANDO ALQUILER ---");
-                          console.log("Dueño Wallet:", machine.owner_wallet);
-                          console.log("Monto (WEI):", montoBigInt.toString());
-                          
-                          // Validación básica
-                          if (!machine.owner_wallet || machine.owner_wallet.length < 40) {
-                            throw new Error("La billetera del dueño en Supabase es inválida.");
-                          }
-
-                          return prepareContractCall({
-                            contract,
-                            method: "function crearTrabajo(address _contratista, uint256 _monto)",
-                            params: [machine.owner_wallet, montoBigInt],
-                          });
+                          if (!machine.owner_wallet || machine.owner_wallet.length < 40) throw new Error("Wallet dueño inválida.");
+                          return prepareContractCall({ contract, method: "function crearTrabajo(address _contratista, uint256 _monto)", params: [machine.owner_wallet, montoBigInt] });
                         }}
                         onTransactionConfirmed={async (receipt) => {
-                          alert("🚀 ¡Alquiler Confirmado Exitosamente!");
-                          console.log("Receipt:", receipt);
+                          alert("🚀 ¡Alquiler Confirmado!");
+                          console.log("Receipt completo:", receipt);
+                          
+                          // ⚠️ INTENTO DE CAPTURA DE ID DEL EVENTO
+                          // Si no podés parsear logs, asumimos que reseteaste la DB y usamos un contador manual o 0.
+                          // Idealmente aquí leerías el evento "JobCreated"
                           
                           if (account) {
                             await supabase.from("alquileres").insert([
@@ -256,36 +182,19 @@ export default function MarketPage() {
                                 estado: "PENDIENTE",
                                 latitud: latitud,
                                 longitud: longitud,
+                                // IMPORTANTE: Asegurate de tener esta columna en Supabase
+                                contract_id: null // Dejamos null para llenarlo manualmente o usar el ID de la fila si están sincronizados
                               },
                             ]);
-                            // Recargar página para actualizar estado
                             window.location.reload();
                           }
                         }}
-                        onError={(error) => {
-                          console.error("❌ ERROR ALQUILER:", error);
-                          
-                          if (error.message.includes("allowance") || error.message.includes("ERC20")) {
-                            alert("⚠️ Error: Fondos no autorizados. Volvé a tocar el Botón 1 y esperá que termine.");
-                          } else {
-                            alert(`❌ Error técnico: ${error.message}. Mirá la consola (F12) para más detalles.`);
-                          }
-                        }}
+                        onError={(error) => alert(error.message.includes("allowance") ? "⚠️ Fondos no autorizados." : `❌ Error: ${error.message}`)}
                         disabled={!machine.disponible || !latitud}
-                        style={{
-                          width: "100%",
-                          backgroundColor:
-                            machine.disponible && latitud ? "#16a34a" : "#3f3f46",
-                          color: "white",
-                          padding: "14px",
-                          borderRadius: "12px",
-                          fontWeight: "bold",
-                          opacity: machine.disponible && latitud ? 1 : 0.5,
-                        }}
+                        style={{ width: "100%", backgroundColor: machine.disponible && latitud ? "#16a34a" : "#3f3f46", color: "white", padding: "14px", borderRadius: "12px", fontWeight: "bold", opacity: machine.disponible && latitud ? 1 : 0.5 }}
                       >
                         {!latitud ? "🚫 Falta GPS" : "2️⃣ Confirmar Alquiler"}
                       </TransactionButton>
-
                     </div>
                   </div>
                 </div>

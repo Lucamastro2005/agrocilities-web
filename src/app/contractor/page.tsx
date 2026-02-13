@@ -17,10 +17,9 @@ export default function ContractorPage() {
   const [nuevoNombre, setNuevoNombre] = useState("");
   const [nuevoTipo, setNuevoTipo] = useState("Tractor");
   const [nuevoPrecio, setNuevoPrecio] = useState("");
-  const [nuevaInversion, setNuevaInversion] = useState(""); // NUEVO: Inversión Inicial
+  const [nuevaInversion, setNuevaInversion] = useState(""); 
   const [nuevaImagen, setNuevaImagen] = useState("");
 
-  // Estado para la proyección financiera (Horas estimadas por mes por máquina)
   const [horasProyectadas, setHorasProyectadas] = useState<{ [key: number]: number }>({});
 
   useEffect(() => { if (account) fetchData(); }, [account]);
@@ -45,28 +44,25 @@ export default function ContractorPage() {
   function calcularMetricas(inversion: number, precioHora: number, horasMes: number) {
     if (!inversion || !precioHora || !horasMes) return { van: 0, recupero: 0, flujoAnual: 0 };
     
-    const flujoAnual = precioHora * horasMes * 12; // Cash Flow Anual
-    const tasaDescuento = 0.10; // Costo de oportunidad del 10% anual
-    const vidaUtil = 5; // Proyección a 5 años
+    const flujoAnual = precioHora * horasMes * 12; 
+    const tasaDescuento = 0.10; 
+    const vidaUtil = 5; 
     
     let van = -inversion;
     for (let t = 1; t <= vidaUtil; t++) {
       van += flujoAnual / Math.pow(1 + tasaDescuento, t);
     }
     
-    const recuperoAños = inversion / flujoAnual; // Payback period simple
-    
+    const recuperoAños = inversion / flujoAnual; 
     return { van, recupero: recuperoAños, flujoAnual };
   }
 
-  // Resto de funciones operativas...
   async function agregarNuevaMaquina(e: React.FormEvent) {
     e.preventDefault();
     if (!account) return;
     const { error } = await supabase.from('maquinas').insert([{
       nombre: nuevoNombre, tipo: nuevoTipo, precio_hora: parseFloat(nuevoPrecio),
-      inversion_inicial: parseFloat(nuevaInversion), // Guardamos el CAPEX
-      // En src/app/contractor/page.tsx, dentro de agregarNuevaMaquina:
+      inversion_inicial: parseFloat(nuevaInversion), 
       imagen_url: nuevaImagen || "https://cdn.pixabay.com/photo/2017/09/06/14/53/tractor-2721779_1280.jpg",
       disponible: true, owner_wallet: account.address
     }]);
@@ -104,7 +100,7 @@ export default function ContractorPage() {
         ) : (
           <div className="grid lg:grid-cols-2 gap-12">
             
-            {/* COLUMNA IZQUIERDA: GESTIÓN DE FLOTA Y FINANZAS */}
+            {/* GESTIÓN DE FLOTA Y FINANZAS */}
             <section>
               <div className="bg-zinc-900 p-6 rounded-2xl border border-zinc-800 mb-8">
                 <h2 className="text-xl font-bold mb-4 flex items-center gap-2">➕ Alta de Activo Fijo</h2>
@@ -144,36 +140,17 @@ export default function ContractorPage() {
                         </button>
                       </div>
 
-                      {/* CALCULADORA DE PROYECCIÓN */}
                       <div className="bg-black/50 p-4 rounded-lg">
                         <div className="flex justify-between items-center mb-4">
                           <label className="text-sm text-zinc-400">Proyección de alquiler mensual (Horas):</label>
-                          <input 
-                            type="number" 
-                            className="w-24 bg-black border border-zinc-600 rounded px-2 py-1 text-sm text-center" 
-                            placeholder="Ej: 150" 
-                            value={horasProyectadas[m.id] || ''} 
-                            onChange={(e) => setHorasProyectadas({...horasProyectadas, [m.id]: parseFloat(e.target.value)})}
-                          />
+                          <input type="number" className="w-24 bg-black border border-zinc-600 rounded px-2 py-1 text-sm text-center" placeholder="Ej: 150" value={horasProyectadas[m.id] || ''} onChange={(e) => setHorasProyectadas({...horasProyectadas, [m.id]: parseFloat(e.target.value)})} />
                         </div>
                         
                         {horasMes > 0 && m.inversion_inicial > 0 && (
                           <div className="grid grid-cols-2 gap-4 text-sm mt-4 pt-4 border-t border-zinc-800/50">
-                            <div>
-                              <p className="text-zinc-500 text-xs uppercase tracking-wider mb-1">Caja Anual (CF)</p>
-                              <p className="font-mono text-green-400">${flujoAnual.toLocaleString()} USDC</p>
-                            </div>
-                            <div>
-                              <p className="text-zinc-500 text-xs uppercase tracking-wider mb-1">Recupero de Inversión</p>
-                              <p className="font-mono text-blue-400">{recupero.toFixed(1)} años</p>
-                            </div>
-                            <div className="col-span-2 mt-2">
-                              <p className="text-zinc-500 text-xs uppercase tracking-wider mb-1">Valor Actual Neto (5 años @ 10%)</p>
-                              <p className={`font-mono text-lg ${van >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                ${van.toLocaleString(undefined, { maximumFractionDigits: 2 })} USDC
-                                {van >= 0 ? ' ✅ Viable' : ' ❌ Destruye Valor'}
-                              </p>
-                            </div>
+                            <div><p className="text-zinc-500 text-xs uppercase tracking-wider mb-1">Caja Anual (CF)</p><p className="font-mono text-green-400">${flujoAnual.toLocaleString()} USDC</p></div>
+                            <div><p className="text-zinc-500 text-xs uppercase tracking-wider mb-1">Recupero de Inversión</p><p className="font-mono text-blue-400">{recupero.toFixed(1)} años</p></div>
+                            <div className="col-span-2 mt-2"><p className="text-zinc-500 text-xs uppercase tracking-wider mb-1">Valor Actual Neto (5 años @ 10%)</p><p className={`font-mono text-lg ${van >= 0 ? 'text-green-500' : 'text-red-500'}`}>${van.toLocaleString(undefined, { maximumFractionDigits: 2 })} USDC {van >= 0 ? ' ✅ Viable' : ' ❌ Destruye Valor'}</p></div>
                           </div>
                         )}
                       </div>
@@ -183,17 +160,13 @@ export default function ContractorPage() {
               </div>
             </section>
 
-            {/* COLUMNA DERECHA: LOGÍSTICA Y RELOJ (Mantenemos la funcionalidad operativa intacta) */}
+            {/* LOGÍSTICA Y CONTROL OPERATIVO */}
             <section>
               <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">⏱️ Control Operativo</h2>
               <div className="space-y-4">
                 {misPedidos.map((pedido) => (
                   <div key={pedido.id} className="bg-zinc-900 p-5 rounded-xl border border-zinc-800 relative">
-                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${
-                      pedido.estado === 'PENDIENTE' ? 'bg-yellow-500' : 
-                      pedido.estado === 'EN CAMINO' ? 'bg-blue-500' : 
-                      pedido.estado === 'TRABAJANDO' ? 'bg-purple-500 animate-pulse' : 'bg-green-500'
-                    }`}></div>
+                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${pedido.estado === 'PENDIENTE' ? 'bg-yellow-500' : pedido.estado === 'EN CAMINO' ? 'bg-blue-500' : pedido.estado === 'TRABAJANDO' ? 'bg-purple-500 animate-pulse' : 'bg-green-500'}`}></div>
                     
                     <div className="pl-3">
                       <div className="flex justify-between mb-2">
